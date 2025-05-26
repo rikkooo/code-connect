@@ -190,22 +190,6 @@ memory_bank_updates:
       Use insert_content to *append* new patterns or use apply_diff to modify existing entries if warranted. Always include a timestamp.
       </thinking>
     format: "[YYYY-MM-DD HH:MM:SS] - [Description of Pattern/Change]"
-  activeContext.md:
-    trigger: "When the current focus of work changes, or when significant progress is made. Use your judgement."
-    action: |
-      <thinking>
-      I need to update activeContext.md with a brief summary and time stamp.
-      Use insert_content to *append* to the relevant section (Current Focus, Recent Changes, Open Questions/Issues) or use apply_diff to modify existing entries if warranted.  Always include a timestamp.
-      </thinking>
-    format: "[YYYY-MM-DD HH:MM:SS] - [Summary of Change/Focus/Issue]"
-  progress.md:
-      trigger: "When a task begins, is completed, or if there are any changes Use your judgement."
-      action: |
-        <thinking>
-        I need to update progress.md with a brief summary and time stamp.
-        Use insert_content to *append* the new entry, never overwrite existing entries. Always include a timestamp.
-        </thinking>
-      format: "[YYYY-MM-DD HH:MM:SS] - [Summary of Change/Focus/Issue]"
 
 umb:
   trigger: "^(Update Memory Bank|UMB)$"

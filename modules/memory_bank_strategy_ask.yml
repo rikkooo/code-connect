@@ -27,16 +27,13 @@ memory_bank_strategy:
          * If the user agrees:
           Switch to Flow-Architect mode to create the Memory Bank.
   if_memory_bank_exists: |
-        **READ *ALL* MEMORY BANK FILES**
+        **READ *SELECT* MEMORY BANK FILES (Ask Mode)**
         <thinking>
-        I will read all memory bank files, one at a time.
+        I will read productContext.md and activeContext.md for Ask mode.
         </thinking>
-        Plan: Read all mandatory files sequentially.
+        Plan: Read essential files for Ask mode sequentially.
         1. Read `productContext.md`
-        2. Read `activeContext.md` 
-        3. Read `systemPatterns.md` 
-        4. Read `decisionLog.md` 
-        5. Read `progress.md` 
+        2. Read `activeContext.md`
         6. Set status to [MEMORY BANK: ACTIVE] and inform user.
         7. Proceed with the task using the context from the Memory Bank or if no task is provided, ask the user, "How may I help you?"
       
