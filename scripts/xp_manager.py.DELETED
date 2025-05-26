@@ -1,0 +1,124 @@
+import json
+import argparse
+import os
+from datetime import datetime
+
+INTERNSHIP_TRACKER_FILE = os.path.join(os.path.dirname(__file__), '..', '..', 'memory-bank', 'internship_tracker.json')
+XP_PER_SUCCESSFUL_TASK = 10
+LEVEL_UP_XP_THRESHOLD = 100
+PROMOTION_LEVEL_THRESHOLD = 100 # Level to reach for promotion from current role
+
+ROLE_PROMOTION_PATH = {
+    "Internship": "Developer Junior",
+    "Developer Junior": "Developer",
+    "Developer": "Developer Senior"
+    # Add more roles as needed
+}
+
+def get_profile_display_name(base_model_name, role, level):
+    # Construct display name, e.g., "Internship G2 - Level 0" or "Developer Junior D3 - Level 5"
+    model_short_name = base_model_name.replace("gemini-flash-", "G").replace("deepseek-coder-", "D").replace(".0","").replace("gemini-","G")
+    return f"{role} {model_short_name} - Level {level}"
+
+def update_intern_profile(model_base_arg, task_outcome_str):
+    """
+    Updates an intern's profile based on task outcome.
+    model_base_arg is the base model identifier, e.g., "gemini-flash-2.0"
+    task_outcome_str is "success" or "failure".
+    """
+    task_outcome = task_outcome_str.lower() == "success"
+
+    try:
+        with open(INTERNSHIP_TRACKER_FILE, 'r+') as f:
+            data = json.load(f)
+            
+            target_profile = None
+            profile_idx = -1
+
+            # Find the current profile for the given model base.
+            # This assumes there's one active profile per model_base in the tracker.
+            # If multiple profiles exist for the same model_base (e.g., due to an error or old data),
+            # this will pick the first one it finds. Ideally, the tracker should maintain one active profile per model_base.
+
+            for i, profile in enumerate(data.get("interns", [])):
+                if profile.get("model_base") == model_base_arg:
+                    target_profile = profile
+                    profile_idx = i
+                    break # Found the profile for the given model_base
+            
+            if not target_profile:
+                print(f"Error: Profile for model_base '{model_base_arg}' not found in {INTERNSHIP_TRACKER_FILE}")
+                return
+
+            target_profile["tasks_attempted"] = target_profile.get("tasks_attempted", 0) + 1
+
+            if task_outcome:
+                target_profile["tasks_successful"] = target_profile.get("tasks_successful", 0) + 1
+                target_profile["current_xp"] = target_profile.get("current_xp", 0) + XP_PER_SUCCESSFUL_TASK
+                print(f"Task successful for {target_profile['display_name']}. +{XP_PER_SUCCESSFUL_TASK} XP.")
+
+                # Check for level up
+                while target_profile["current_xp"] >= LEVEL_UP_XP_THRESHOLD:
+                    target_profile["current_level"] = target_profile.get("current_level", 0) + 1
+                    target_profile["current_xp"] -= LEVEL_UP_XP_THRESHOLD
+                    print(f"{target_profile['display_name']} leveled up to Level {target_profile['current_level']}!")
+
+                    # Check for promotion
+                    if target_profile["current_level"] >= PROMOTION_LEVEL_THRESHOLD:
+                        current_role = target_profile["current_role"]
+                        new_role = ROLE_PROMOTION_PATH.get(current_role)
+                        if new_role:
+                            promoted_display_name = get_profile_display_name(target_profile["model_base"], new_role, 0)
+                            print(f"Congratulations! {target_profile['display_name']} has been promoted to {new_role}!")
+                            
+                            # Option 1: Update existing profile
+                            target_profile["current_role"] = new_role
+                            target_profile["current_level"] = 0
+                            target_profile["current_xp"] = 0
+                            target_profile["display_name"] = promoted_display_name
+                            target_profile["profile_id"] = f"{new_role.lower().replace(' ', '-')}-{target_profile['model_base'].replace('gemini-flash-','g').replace('deepseek-coder-','d').replace('.0','')}-level-0"
+
+
+                            if "promotion_history" not in target_profile:
+                                target_profile["promotion_history"] = []
+                            target_profile["promotion_history"].append(
+                                f"Promoted to {new_role} on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                            )
+                        else:
+                            print(f"{target_profile['display_name']} has reached max level in current role path.")
+                            # Cap level at PROMOTION_LEVEL_THRESHOLD if no further role
+                            target_profile["current_level"] = PROMOTION_LEVEL_THRESHOLD 
+                            target_profile["current_xp"] = 0 
+                        
+            else:
+                print(f"Task failed for {target_profile['display_name']}.")
+
+            # Update display name in case of level up without promotion
+            if not (task_outcome and target_profile["current_level"] == 0 and target_profile["current_role"] != "Internship"): # if not just promoted
+                 target_profile["display_name"] = get_profile_display_name(
+                    target_profile["model_base"], 
+                    target_profile["current_role"], 
+                    target_profile["current_level"]
+                )
+            
+            data["interns"][profile_idx] = target_profile
+            f.seek(0)
+            json.dump(data, f, indent=2)
+            f.truncate()
+            print(f"Profile for {target_profile['display_name']} updated successfully.")
+
+    except FileNotFoundError:
+        print(f"Error: {INTERNSHIP_TRACKER_FILE} not found.")
+    except json.JSONDecodeError:
+        print(f"Error: Could not decode JSON from {INTERNSHIP_TRACKER_FILE}.")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Update intern profile XP and level.")
+    parser.add_argument("model_base", help="The base model identifier of the intern (e.g., 'gemini-flash-2.0', 'gemini-flash-2.5', 'deepseek-coder-3.0').")
+    parser.add_argument("task_outcome", choices=["success", "failure"], help="Outcome of the task ('success' or 'failure').")
+    
+    args = parser.parse_args()
+    
+    update_intern_profile(args.model_base, args.task_outcome)
