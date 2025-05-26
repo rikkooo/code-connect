@@ -4,7 +4,7 @@
 
 <br>
 
-# 🧠 Roo Code Memory Bank
+# 🧠 Code Connect Memory Bank
 
 **Persistent Project Context for AI-Assisted Development**
 
